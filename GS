@@ -1,0 +1,67 @@
+function backUpContacts() {
+try{
+  var addr,backUpObjAsString,backUpTxtFile,contacts,objContactsForBackUp,i,L,objOneContact,name,textFileID,thisContact;
+  
+  /*
+    This code gets all the contacts and puts the contact information into an object, then converts the object to a string
+    and saves the object as a string to a text file in your Google Drive
+  
+  */
+
+  objContactsForBackUp = {};//initialize object to empty object
+  Logger.log('start')
+
+  contacts = ContactsApp.getContacts();//Get all contacts including Other Contacts - Warning - you may have a lot more
+  //contacts in your Other Contacts than you realize
+  
+  L = contacts.length;
+  Logger.log('L: ' + L)
+
+  for (i=0; i<L; i++) {//Loop through all the contacts
+    thisContact = contacts[i];//Get this contact
+    
+    objOneContact = {};//Reset on every loop because this is an inner object
+    
+    name = thisContact.getFullName();
+    Logger.log('name: ' + name)
+    
+    objOneContact.name = name;
+    objOneContact.address = thisContact.getAddresses(ContactsApp.Field.HOME_ADDRESS);
+    objOneContact.workAddress = thisContact.getAddresses(ContactsApp.Field.WORK_ADDRESS);
+    objOneContact.phone = thisContact.getAddresses(ContactsApp.Field.MOBILE_PHONE);//Also CALLBACK_PHONE - HOME_PHONE - 
+    
+    try{
+    objOneContact.orgName = thisContact.getCompanies()[0].getCompanyName();
+    }catch(e) {}
+    
+    objOneContact.email = thisContact.getEmails()[0].getAddress();
+    objOneContact.birthday = thisContact.getDates(ContactsApp.Field.BIRTHDAY)[0];
+    
+    objContactsForBackUp.name = objOneContact;//Put inner object into outer object and key by full name
+  }
+  
+  //Save object to your backup file
+  
+  backUpObjAsString = JSON.stringify(objContactsForBackUp);
+  Logger.log('backUpObjAsString: ' + backUpObjAsString)
+  
+  textFileID = PropertiesService.getScriptProperties().getProperty('backUpFileID');
+  
+  if (!textFileID) {
+    backUpTxtFile = DriveApp.createFile("Contacts Back Up", "", MimeType.PLAIN_TEXT);//Create a new plain text file
+    textFileID = backUpTxtFile.getId();
+    
+    if (textFileID) {//If the ID of the text file was retrieved
+      PropertiesService.getScriptProperties().setProperty('backUpFileID', textFileID);//Save the file ID for retrieval later
+    }
+  } else {
+    backUpTxtFile = DriveApp.getFileById(textFileID);//Get the text file by its file ID
+  }
+  
+  backUpTxtFile.setContent(backUpObjAsString);//Set the file content
+
+}catch(e){
+  Logger.log('Error: ' + e.message);
+  Logger.log('Stack: ' + e.stack);
+}
+}
